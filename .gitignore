@@ -1,0 +1,5 @@
+build/
+.DS_Store
+# jamais d’enregistrements perso dans le dépôt
+*.m4a
+*.wav
