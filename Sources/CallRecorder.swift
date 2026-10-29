@@ -18,18 +18,18 @@ final class SystemAudioTap {
         description.uuid = UUID()
         description.muteBehavior = .unmuted
         description.isPrivate = true
-        try check(AudioHardwareCreateProcessTap(description, &tapID), "Création du tap audio système")
+        try check(AudioHardwareCreateProcessTap(description, &tapID), L("Création du tap audio système", "Creating the system audio tap"))
 
         var streamDescription = try readValue(tapID, kAudioTapPropertyFormat, initial: AudioStreamBasicDescription())
         guard let format = AVAudioFormat(streamDescription: &streamDescription) else {
-            throw CoreAudioError(status: -1, what: "Format du tap audio illisible")
+            throw CoreAudioError(status: -1, what: L("Format du tap audio illisible", "Unreadable system audio format"))
         }
 
         let outputDevice = try readValue(AudioObjectID(kAudioObjectSystemObject),
                                          kAudioHardwarePropertyDefaultSystemOutputDevice,
                                          initial: AudioObjectID(kAudioObjectUnknown))
         guard let outputUID = readString(outputDevice, kAudioDevicePropertyDeviceUID) else {
-            throw CoreAudioError(status: -1, what: "Sortie audio introuvable")
+            throw CoreAudioError(status: -1, what: L("Sortie audio introuvable", "No audio output found"))
         }
         let aggregate: [String: Any] = [
             kAudioAggregateDeviceNameKey: "Enregistreur d'appels",
@@ -42,7 +42,7 @@ final class SystemAudioTap {
             kAudioAggregateDeviceTapListKey: [[kAudioSubTapDriftCompensationKey: true,
                                                kAudioSubTapUIDKey: description.uuid.uuidString]],
         ]
-        try check(AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID), "Création du périphérique agrégé")
+        try check(AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID), L("Création du périphérique agrégé", "Creating the aggregate device"))
 
         let file = try AVAudioFile(forWriting: url, settings: [
             AVFormatIDKey: kAudioFormatMPEG4AAC,
@@ -63,8 +63,8 @@ final class SystemAudioTap {
                 }
             }
             try? file.write(from: buffer)
-        }, "Branchement sur le tap")
-        try check(AudioDeviceStart(aggregateID, procID), "Démarrage de la capture système")
+        }, L("Branchement sur le tap", "Connecting to the tap"))
+        try check(AudioDeviceStart(aggregateID, procID), L("Démarrage de la capture système", "Starting system audio capture"))
     }
 
     func stop() {
@@ -94,8 +94,13 @@ struct Recording {
 
 /// Enregistre le micro (ta voix) et le son système (ton correspondant), puis mixe les deux dans un .m4a.
 final class CallRecorder {
-    static let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("Appels enregistrés", isDirectory: true)
+    /// ~/Documents/Appels enregistrés (ou Call Recordings) : on garde le dossier existant si la langue change.
+    static var folder: URL {
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let names = ["Appels enregistrés", "Call Recordings"]
+        let existing = names.first { FileManager.default.fileExists(atPath: documents.appendingPathComponent($0).path) }
+        return documents.appendingPathComponent(existing ?? L(names[0], names[1]), isDirectory: true)
+    }
 
     private let tap = SystemAudioTap()
     private var mic: AVAudioRecorder?
@@ -122,7 +127,7 @@ final class CallRecorder {
         }
         guard mic.record() else {
             tap.stop()
-            throw CoreAudioError(status: -1, what: "Le micro n'a pas pu démarrer")
+            throw CoreAudioError(status: -1, what: L("Le micro n'a pas pu démarrer", "The microphone couldn't start"))
         }
         self.mic = mic
     }
@@ -136,13 +141,14 @@ final class CallRecorder {
         mic?.stop()
         mic = nil
         tap.stop()
-        guard let dir = workDir else { throw CoreAudioError(status: -1, what: "Aucun enregistrement en cours") }
+        guard let dir = workDir else { throw CoreAudioError(status: -1, what: L("Aucun enregistrement en cours", "No recording in progress")) }
         workDir = nil
 
-        try FileManager.default.createDirectory(at: Self.folder, withIntermediateDirectories: true)
+        let folder = Self.folder
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd 'à' HH'h'mm"
-        let output = uniqueURL(Self.folder.appendingPathComponent("Appel \(formatter.string(from: startDate))"))
+        formatter.dateFormat = L("'Appel' yyyy-MM-dd 'à' HH'h'mm", "'Call' yyyy-MM-dd 'at' HH.mm")
+        let output = uniqueURL(folder.appendingPathComponent(formatter.string(from: startDate)))
 
         let recording = Recording(audio: output, date: startDate, workDir: dir)
         do {
@@ -167,7 +173,7 @@ final class CallRecorder {
         }
         guard !composition.tracks.isEmpty,
               let export = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetAppleM4A) else {
-            throw CoreAudioError(status: -1, what: "Aucun son n'a été capté")
+            throw CoreAudioError(status: -1, what: L("Aucun son n'a été capté", "No sound was captured"))
         }
         try await export.export(to: output, as: .m4a)
     }

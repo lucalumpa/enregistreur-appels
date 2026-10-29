@@ -23,6 +23,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key><string>com.lucagoudon.EnregistreurAppels</string>
+  <key>CFBundleDevelopmentRegion</key><string>fr</string>
+  <key>CFBundleLocalizations</key><array><string>fr</string><string>en</string></array>
   <key>CFBundleName</key><string>Enregistreur d'appels</string>
   <key>CFBundleExecutable</key><string>EnregistreurAppels</string>
   <key>CFBundlePackageType</key><string>APPL</string>
@@ -35,6 +37,19 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
+
+# Textes des fenêtres d'autorisation de macOS, dans la langue du Mac.
+mkdir -p "$APP/Contents/Resources/en.lproj" "$APP/Contents/Resources/fr.lproj"
+cat > "$APP/Contents/Resources/en.lproj/InfoPlist.strings" <<'STRINGS'
+"CFBundleName" = "Call Recorder";
+"NSMicrophoneUsageDescription" = "To record your voice during calls.";
+"NSAudioCaptureUsageDescription" = "To record the other person's voice during calls.";
+STRINGS
+cat > "$APP/Contents/Resources/fr.lproj/InfoPlist.strings" <<'STRINGS'
+"CFBundleName" = "Enregistreur d'appels";
+"NSMicrophoneUsageDescription" = "Pour enregistrer ta voix pendant les appels.";
+"NSAudioCaptureUsageDescription" = "Pour enregistrer la voix de ton correspondant pendant les appels.";
+STRINGS
 
 if [[ "${1:-}" == "--release" ]]; then
   # Signature « ad hoc » : l'app n'est liée à aucun compte développeur.
