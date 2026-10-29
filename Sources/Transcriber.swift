@@ -20,22 +20,24 @@ enum Transcriber {
         let speaker: String
     }
 
-    /// Écrit « Appel ….txt » à côté du fichier audio et renvoie son URL.
+    /// Écrit le .txt à côté du fichier audio et renvoie son URL.
     static func transcribe(_ recording: Recording) async throws -> URL {
-        let mine = try await segments(of: recording.myVoice, speaker: "Moi")
-        let theirs = try await segments(of: recording.theirVoice, speaker: "Correspondant")
+        let mine = try await segments(of: recording.myVoice, speaker: L("Moi", "Me"))
+        let theirs = try await segments(of: recording.theirVoice, speaker: L("Correspondant", "Other person"))
         let merged = (removeEcho(mine, heardIn: theirs) + theirs).sorted { $0.start < $1.start }
 
         let formatter = DateFormatter()
-        formatter.dateFormat = "dd/MM/yyyy 'à' HH'h'mm"
+        formatter.dateFormat = L("dd/MM/yyyy 'à' HH'h'mm", "MMM d, yyyy 'at' h:mm a")
+        formatter.locale = Locale(identifier: Language.current.rawValue)
         let duration = Int((try? await AVURLAsset(url: recording.audio).load(.duration).seconds) ?? 0)
-        var text = "Appel du \(formatter.string(from: recording.date)) — \(duration / 60) min \(duration % 60) s\n"
-        text += "(transcription automatique Whisper, peut contenir des erreurs)\n"
+        var text = L("Appel du ", "Call on ") + "\(formatter.string(from: recording.date)) — \(duration / 60) min \(duration % 60) s\n"
+        text += L("(transcription automatique Whisper, peut contenir des erreurs)",
+                  "(automatic Whisper transcript, may contain mistakes)") + "\n"
         var lastSpeaker = ""
         for segment in merged {
             if segment.speaker != lastSpeaker {
                 let s = segment.start / 1000
-                text += String(format: "\n[%02d:%02d] ", s / 60, s % 60) + "\(segment.speaker) : \(segment.text)"
+                text += String(format: "\n[%02d:%02d] ", s / 60, s % 60) + segment.speaker + L(" : ", ": ") + segment.text
                 lastSpeaker = segment.speaker
             } else {
                 text += " \(segment.text)"
@@ -52,7 +54,7 @@ enum Transcriber {
         let wav = base.appendingPathExtension("wav")
         try await run("/usr/bin/afconvert", ["-f", "WAVE", "-d", "LEI16@16000", "-c", "1", audio.path, wav.path])
 
-        var args = ["-m", model.path, "-l", "fr", "-f", wav.path, "-mc", "0", "-sns", "-np", "-oj", "-of", base.path]
+        var args = ["-m", model.path, "-l", "auto", "-f", wav.path, "-mc", "0", "-sns", "-np", "-oj", "-of", base.path]
         if FileManager.default.fileExists(atPath: vadModel.path) { args += ["--vad", "-vm", vadModel.path] }
         try await run(whisper, args)
 

@@ -1,5 +1,9 @@
 # Enregistreur d'appels
 
+> 🇬🇧 **macOS call recorder with local transcription.** A tiny menu bar app that automatically records calls made with the Mac's **Phone** or **FaceTime** app (your voice from the mic + the other person's voice from system audio), then transcribes them **100 % offline** with [whisper.cpp](https://github.com/ggml-org/whisper.cpp), labelling who speaks (*Moi* = me / *Correspondant* = the other person). Free, open source, nothing leaves your Mac. Requires macOS 15+, Apple Silicon or Intel. [Download the app](../../releases/latest) · **The app is available in English and French** (menu → *Language*); transcription language is detected automatically. The docs below are in French. ⚠️ Always tell the other person you are recording — it's required by law in many countries.
+
+<p align="center"><img src="docs/menu.png" alt="Menu de l'app dans la barre de menus" width="420"></p>
+
 Petite app macOS qui vit dans la barre de menus et **enregistre les appels passés avec l'app Téléphone ou FaceTime** du Mac, puis les **transcrit en local** en indiquant qui parle.
 
 ```
@@ -14,6 +18,7 @@ Appel du 29/10/2026 à 21h46 — 10 min 37 s
 - 📝 **Transcription « Moi / Correspondant »** avec [whisper.cpp](https://github.com/ggml-org/whisper.cpp), entièrement sur ton Mac : rien ne part sur internet.
 - 🔇 Les phrases que le micro réentend par les haut-parleurs sont retirées, et les silences sont ignorés (détecteur de voix Silero).
 - 📁 Tout est rangé dans `~/Documents/Appels enregistrés/`.
+- 🌍 **Français ou anglais** : choisis la langue de l'app dans le menu **Langue**. La langue de l'appel est détectée automatiquement pour la transcription.
 
 > ⚠️ **Préviens toujours ton correspondant.** Enregistrer une conversation privée sans le consentement de la personne est illégal dans de nombreux pays (en France : article 226-1 du Code pénal).
 
@@ -78,6 +83,7 @@ La liste montre les processus qui utilisent le micro ; ceux reconnus comme un ap
 | [`CallRecorder.swift`](Sources/CallRecorder.swift) | Capture du son système (*process tap* Core Audio) et du micro, puis mixage |
 | [`Transcriber.swift`](Sources/Transcriber.swift) | Whisper voix par voix, fusion « Moi / Correspondant », filtres anti-écho et anti-boucles |
 | [`CoreAudioUtils.swift`](Sources/CoreAudioUtils.swift) | Petites fonctions d'accès à Core Audio |
+| [`Localization.swift`](Sources/Localization.swift) | Choix de la langue et textes français / anglais |
 
 ## Licence
 
