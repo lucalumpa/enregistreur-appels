@@ -32,6 +32,9 @@ final class AppModel: ObservableObject {
         didSet { UserDefaults.standard.set(autoRecord, forKey: "autoRecord") }
     }
     @Published var launchAtLogin = SMAppService.mainApp.status == .enabled
+    @Published var language = Language.current {
+        didSet { Language.current = language }
+    }
 
     private let recorder = CallRecorder()
     private var startedAutomatically = false
@@ -58,7 +61,7 @@ final class AppModel: ObservableObject {
             message = nil
             tick()
         } catch {
-            message = "Impossible de démarrer : \(error.localizedDescription)"
+            message = L("Impossible de démarrer : ", "Couldn't start: ") + error.localizedDescription
         }
     }
 
@@ -78,7 +81,7 @@ final class AppModel: ObservableObject {
                     recording.discardTracks()
                 }
             } catch {
-                message = "Erreur à l'enregistrement : \(error.localizedDescription)"
+                message = L("Erreur à l'enregistrement : ", "Couldn't save the recording: ") + error.localizedDescription
                 isSaving = false
             }
         }
@@ -92,7 +95,7 @@ final class AppModel: ObservableObject {
             recording.discardTracks()
         } catch {
             // Les pistes restent dans le dossier temporaire ; l'audio mixé, lui, est bien enregistré.
-            message = "Transcription impossible : \(error.localizedDescription)"
+            message = L("Transcription impossible : ", "Transcription failed: ") + error.localizedDescription
         }
     }
 
@@ -100,7 +103,7 @@ final class AppModel: ObservableObject {
         do {
             if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
         } catch {
-            message = "Lancement au démarrage : \(error.localizedDescription)"
+            message = L("Lancement au démarrage : ", "Launch at login: ") + error.localizedDescription
         }
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
@@ -129,42 +132,45 @@ struct MenuContent: View {
 
     var body: some View {
         if model.isRecording {
-            Text("● Enregistrement en cours — \(model.elapsed)")
-            Button("Arrêter l'enregistrement") { model.stop() }
+            Text(L("● Enregistrement en cours — ", "● Recording — ") + model.elapsed)
+            Button(L("Arrêter l'enregistrement", "Stop recording")) { model.stop() }
                 .keyboardShortcut("s")
         } else if model.isSaving {
-            Text("Enregistrement du fichier…")
+            Text(L("Enregistrement du fichier…", "Saving file…"))
         } else {
-            Button("Enregistrer maintenant") { model.start() }
+            Button(L("Enregistrer maintenant", "Record now")) { model.start() }
                 .keyboardShortcut("r")
         }
-        if model.transcriptionsRunning > 0 { Text("Transcription en cours…") }
+        if model.transcriptionsRunning > 0 { Text(L("Transcription en cours…", "Transcribing…")) }
         if let message = model.message { Text(message) }
 
         Divider()
-        Toggle("Enregistrer automatiquement les appels", isOn: $model.autoRecord)
+        Toggle(L("Enregistrer automatiquement les appels", "Record calls automatically"), isOn: $model.autoRecord)
         if Transcriber.isAvailable {
-            Toggle("Transcrire chaque appel", isOn: $model.autoTranscribe)
+            Toggle(L("Transcrire chaque appel", "Transcribe every call"), isOn: $model.autoTranscribe)
         } else {
-            Text("Transcription : installe whisper-cpp et son modèle")
+            Text(L("Transcription : installe whisper-cpp et son modèle", "Transcription: install whisper-cpp and its model"))
         }
-        Toggle("Lancer à l'ouverture de session", isOn: Binding(
+        Toggle(L("Lancer à l'ouverture de session", "Launch at login"), isOn: Binding(
             get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) }))
+        Picker(L("Langue", "Language"), selection: $model.language) {
+            ForEach(Language.allCases) { Text($0.label).tag($0) }
+        }
 
         Divider()
         if let last = model.lastRecording {
-            Button("Écouter le dernier appel") { NSWorkspace.shared.open(last) }
+            Button(L("Écouter le dernier appel", "Play last call")) { NSWorkspace.shared.open(last) }
         }
         if let transcript = model.lastTranscript {
-            Button("Lire la dernière transcription") { NSWorkspace.shared.open(transcript) }
+            Button(L("Lire la dernière transcription", "Open last transcript")) { NSWorkspace.shared.open(transcript) }
         }
-        Button("Ouvrir le dossier des appels") {
+        Button(L("Ouvrir le dossier des appels", "Open recordings folder")) {
             try? FileManager.default.createDirectory(at: CallRecorder.folder, withIntermediateDirectories: true)
             NSWorkspace.shared.open(CallRecorder.folder)
         }
-        Text("Pense à prévenir ton correspondant.")
+        Text(L("Pense à prévenir ton correspondant.", "Remember to tell the other person."))
         Divider()
-        Button("Quitter") { model.stop(); NSApp.terminate(nil) }
+        Button(L("Quitter", "Quit")) { model.stop(); NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }
 }
