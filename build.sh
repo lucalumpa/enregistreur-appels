@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 APP="build/Enregistreur d'appels.app"
-VERSION="1.1"
+VERSION="1.2"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 
